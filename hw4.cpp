@@ -5,9 +5,163 @@
 #include <iostream>
 #include <numeric>
 #include <algorithm>
-#include <queue>
 
 using namespace std;
+
+vector<int> vectorAdd(vector<int> v1, vector<int> v2){
+    vector<int> sum(784, 0);
+    for(int i = 0; i < 784; i++){
+        sum[i] = v1[i] + v2[i];
+    }
+
+    return sum;
+}
+
+vector<int> vectorMul(vector<int> v1, int scalar){
+    vector<int> mul(784, 0);
+    for(int i = 0; i < 784; i++){
+        mul[i] = v1[i] * scalar;
+    }
+
+    return mul;
+}
+
+int labelSet(int target, int currLabel){
+    if(currLabel == target){
+        return 1;
+    }
+    else{
+        return -1;
+    } 
+}
+
+vector<int> perceptron(vector< vector<int> > matrix, int passes, int target){
+    vector<int> w(784, 0);
+    int dot_product = 0;
+    int label = 0;
+
+    for(int p = 0; p < passes; p++){
+        for(int i = 0; i < matrix.size(); i++){
+            label = labelSet(target, matrix[i][784]);
+            dot_product = inner_product(w.begin(), w.end(), matrix[i].begin(), 0);
+
+            if(dot_product*label <= 0){
+                w = vectorAdd(w, vectorMul(matrix[i], label)); 
+            }
+        }
+    }
+    return w;
+}
+
+double perceptronError(vector< vector<int> > testData, vector<int> w, int target){
+    double error = 0;
+    int dot_product = 0;
+    int label = 0;
+
+    for(int i = 0; i < testData.size(); i++){
+        label = labelSet(target, testData[i][784]);
+        dot_product = inner_product(w.begin(), w.end(), testData[i].begin(), 0);
+
+        if(dot_product*label <= 0){
+            error++;
+        }
+    }
+
+    return error/((double)testData.size());
+}
+
+vector< vector<int> > votedPerceptron(vector< vector<int> > matrix, int passes, int target){
+    vector<int> w(784, 0);
+    int dot_product = 0;
+    int label = 0;
+    vector< vector<int> > wList;
+    for(int p = 0; p < passes; p++){
+        for(int i = 0; i < matrix.size(); i++){
+            label = labelSet(target, matrix[i][784]);
+            dot_product = inner_product(w.begin(), w.end(), matrix[i].begin(), 0);
+
+            if(dot_product*label <= 0){
+                w = vectorAdd(w, vectorMul(matrix[i], label)); 
+            }
+
+            wList.push_back(w);
+        }
+    }
+    return wList;
+}
+
+double votedPerceptronError(vector< vector<int> > testData, vector< vector<int> > wList, int target){
+    double error = 0;
+    int dot_product = 0;
+    int label = 0;
+    int same = 0;
+    int diff = 0;
+
+    for(int i = 0; i < testData.size(); i++){
+        for(int j = 0; j < wList.size(); j++){
+            label = labelSet(target, testData[i][784]);
+            dot_product = inner_product(wList[j].begin(), wList[j].end(), testData[i].begin(), 0);
+
+            if(dot_product*label <= 0){
+               // cout<<"In diff"<<endl;
+                diff++;
+            }
+            else{
+                same++;
+            }
+        }
+        //cout<<"Same:  " << same << endl;
+        //cout<<"Diff:  " << diff << endl;
+        if(same < diff){
+            //cout<<"Hello"<<endl;
+            error++;
+        }
+        same = 0;
+        diff = 0;
+    }
+
+    return error/((double)testData.size());
+}
+
+vector< vector<int> > avgPerceptron(vector< vector<int> > matrix, int passes, int target){
+    vector<int> w(784, 0);
+    int dot_product = 0;
+    int label = 0;
+    vector< vector<int> > wList;
+    for(int p = 0; p < passes; p++){
+        for(int i = 0; i < matrix.size(); i++){
+            label = labelSet(target, matrix[i][784]);
+            dot_product = inner_product(w.begin(), w.end(), matrix[i].begin(), 0);
+
+            if(dot_product*label <= 0){
+                w = vectorAdd(w, vectorMul(matrix[i], label)); 
+            }
+
+            wList.push_back(w);
+        }
+    }
+    return wList;
+}
+
+double avgPerceptronError(vector< vector<int> > testData, vector< vector<int> > wList, int target){
+    double error = 0;
+    int dot_product = 0;
+    int label = 0;
+    vector<int> wSum(784, 0);
+
+    for(int j = 0; j < wList.size(); j++){
+        wSum = vectorAdd(wSum, wList[j]);
+    }
+    for(int i = 0; i < testData.size(); i++){
+        label = labelSet(target, testData[i][784]);
+        dot_product = inner_product(wSum.begin(), wSum.end(), testData[i].begin(), 0);
+        if(dot_product*label <= 0){
+            error++;
+        }
+    }
+
+    return error/((double)testData.size());
+}
 
 vector< vector<int> > fileToMatrix(string filename){
     char delimiter = ' ';
@@ -66,15 +220,53 @@ vector< vector<int> > fileToMatrix(string filename){
 
 int main() {
 
-    string trainingFile = "hw2train.txt";
-    string validateFile = "hw2validate.txt";
-    string testFile = "hw2test.txt";
+    string trainingAFile = "hw4atrain.txt";
+    string testAFile = "hw4atest.txt";
+    string trainingBFile = "hw4btrain.txt";
+    string testBFile = "hw4btest.txt";
 
-    vector< vector<int> > trainingMatrix = fileToMatrix(trainingFile);
-    vector< vector<int> > validateMatrix = fileToMatrix(validateFile);
-    vector< vector<int> > testMatrix = fileToMatrix(testFile);
+    int target = 6;
+    int passes = 3;
+    double error = 0;
 
-    cout << "This is the error: " << value << endl;
+    vector< vector<int> > trainingAMatrix = fileToMatrix(trainingAFile);
+    vector< vector<int> > testAMatrix = fileToMatrix(testAFile);
+    vector< vector<int> > trainingBMatrix = fileToMatrix(trainingBFile);
+    vector< vector<int> > testBMatrix = fileToMatrix(testBFile);
    
+    cout<< "Starting perception"<<endl;
+
+    for(int i = 1; i < passes + 1; i++){
+        vector<int> original = perceptron(trainingAMatrix, i, target);
+        
+        error = perceptronError(trainingAMatrix, original, target);
+        cout<<"This is the training " << i << " error:  " << error << endl;
+
+        error = perceptronError(testAMatrix, original, target);
+        cout<<"This is the test " << i << " error:  " << error << endl;      
+    }
+
+    cout<<endl<< "Starting voted perception"<<endl;
+
+    for(int i = 1; i < passes + 1; i++){
+        vector< vector<int> > voted = votedPerceptron(trainingAMatrix, i, target);
+        error = votedPerceptronError(trainingAMatrix, voted, target);
+        cout<<"This is the training " << i << " error:  " << error << endl;
+
+        error = votedPerceptronError(testAMatrix, voted, target);
+        cout<<"This is the test " << i << " error:  " << error << endl;  
+    }
+
+    cout<<endl<< "Starting average perception"<<endl;
+
+    for(int i = 1; i < passes + 1; i++){
+        vector< vector<int> > avg = avgPerceptron(trainingAMatrix, i, target);
+        error = avgPerceptronError(trainingAMatrix, avg, target);
+        cout<<"This is the training " << i << " error:  " << error << endl;
+
+        error = avgPerceptronError(testAMatrix, avg, target);
+        cout<<"This is the test " << i << " error:  " << error << endl;  
+    }    
+    
     return 0;
 }
