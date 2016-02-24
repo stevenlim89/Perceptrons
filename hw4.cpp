@@ -5,6 +5,7 @@
 #include <iostream>
 #include <numeric>
 #include <algorithm>
+#include <iomanip>
 
 using namespace std;
 
@@ -13,7 +14,6 @@ vector<int> vectorAdd(vector<int> v1, vector<int> v2){
     for(int i = 0; i < 784; i++){
         sum[i] = v1[i] + v2[i];
     }
-
     return sum;
 }
 
@@ -22,7 +22,6 @@ vector<int> vectorMul(vector<int> v1, int scalar){
     for(int i = 0; i < 784; i++){
         mul[i] = v1[i] * scalar;
     }
-
     return mul;
 }
 
@@ -53,6 +52,42 @@ vector<int> perceptron(vector< vector<int> > matrix, int passes, int target){
     return w;
 }
 
+//creates a list(vector) of W classifier vectors seperating out each label (label is +, other labels are -)
+vector< vector<int> > ClassifierCi( vector< vector<int> > data) {
+	vector< vector<int> > listOfWVectors;
+
+	for (int i=0; i < 9; i++ ) {
+		listOfWVectors.push_back( perceptron(data, 1, i) );	
+	}
+	return listOfWVectors;
+}
+
+
+int OnevsAllMulticlass( vector< vector<int> > listofWVectors, vector<int> testX) {
+	int numofmatches = 0;
+	int dot_product = 0;
+	int label = 1;    //label is positive always (checking whether it gets marked as positive)
+	int returnlabel = 10;
+
+	for (int i=0;i<listofWVectors.size();i++) {
+            	dot_product = inner_product(listofWVectors[i].begin(), listofWVectors[i].end(), testX.begin(), 0);
+
+		//greater than, does match
+            	if(dot_product*label > 0){
+			numofmatches++;
+			returnlabel = i;		                
+		}		
+	}
+
+	//10 will be index into confusion array for "Dont Know"
+	if(numofmatches>1) {
+		return 10;
+	}
+	else{
+		return returnlabel;
+	}
+}
+
 double perceptronError(vector< vector<int> > testData, vector<int> w, int target){
     double error = 0;
     int dot_product = 0;
@@ -66,7 +101,6 @@ double perceptronError(vector< vector<int> > testData, vector<int> w, int target
             error++;
         }
     }
-
     return error/((double)testData.size());
 }
 
@@ -103,7 +137,6 @@ double votedPerceptronError(vector< vector<int> > testData, vector< vector<int> 
             dot_product = inner_product(wList[j].begin(), wList[j].end(), testData[i].begin(), 0);
 
             if(dot_product*label <= 0){
-               // cout<<"In diff"<<endl;
                 diff++;
             }
             else{
@@ -113,7 +146,6 @@ double votedPerceptronError(vector< vector<int> > testData, vector< vector<int> 
         //cout<<"Same:  " << same << endl;
         //cout<<"Diff:  " << diff << endl;
         if(same < diff){
-            //cout<<"Hello"<<endl;
             error++;
         }
         same = 0;
@@ -182,7 +214,7 @@ vector< vector<int> > fileToMatrix(string filename){
     int count = 0;
 
     ifstream trainfile; 
-    trainfile.open(filename);
+    trainfile.open(filename, std::ifstream::in);
 
     //check to see if the file is opened:
     if (trainfile.is_open())
@@ -257,7 +289,7 @@ int main() {
         cout<<"This is the test " << i << " error:  " << error << endl;  
     }
 
-    cout<<endl<< "Starting average perception"<<endl;
+    cout<<endl<< "Starting average perception" << endl;
 
     for(int i = 1; i < passes + 1; i++){
         vector< vector<int> > avg = avgPerceptron(trainingAMatrix, i, target);
@@ -266,7 +298,29 @@ int main() {
 
         error = avgPerceptronError(testAMatrix, avg, target);
         cout<<"This is the test " << i << " error:  " << error << endl;  
-    }    
-    
+    }  
+
+    double confusion [11][10] = {{0}};
+    double labelCount[10] = {0};
+
+    cout << endl << "One-vs-all Multiclass" << endl;
+    vector< vector<int> > listOfWVectors = ClassifierCi(trainingBMatrix);
+    int result = 0;
+    for(int i = 0; i<testBMatrix.size(); i++) {
+	result = OnevsAllMulticlass(listOfWVectors, testBMatrix[i]);
+
+	labelCount[testBMatrix[i][784]] = labelCount[testBMatrix[i][784]] + 1;
+	confusion[result][testBMatrix[i][784]]++;
+    }
+
+    cout << "Confusion Matrix" << endl;
+    for(int i = 0; i < 11; i++){
+        for(int j = 0; j < 10; j++){
+            confusion[i][j] = confusion[i][j]/labelCount[j];
+            cout << "  " << fixed << setprecision(4) << confusion[i][j];
+        }
+        cout << endl;
+    }
+
     return 0;
 }
