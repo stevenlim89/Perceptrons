@@ -17,6 +17,14 @@ vector<int> vectorAdd(vector<int> v1, vector<int> v2){
     return sum;
 }
 
+vector<long long int> vectorAdd2(vector<long long int> v1, vector<int> v2){
+    vector<long long int> sum(784, 0);
+    for(int i = 0; i < 784; i++){
+        sum[i] = v1[i] + v2[i];
+    }
+    return sum;
+}
+
 vector<int> vectorMul(vector<int> v1, int scalar){
     vector<int> mul(784, 0);
     for(int i = 0; i < 784; i++){
@@ -56,7 +64,7 @@ vector<int> perceptron(vector< vector<int> > matrix, int passes, int target){
 vector< vector<int> > ClassifierCi( vector< vector<int> > data) {
 	vector< vector<int> > listOfWVectors;
 
-	for (int i=0; i < 9; i++ ) {
+	for (int i=0; i < 10; i++ ) {
 		listOfWVectors.push_back( perceptron(data, 1, i) );	
 	}
 	return listOfWVectors;
@@ -70,10 +78,10 @@ int OnevsAllMulticlass( vector< vector<int> > listofWVectors, vector<int> testX)
 	int returnlabel = 10;
 
 	for (int i=0;i<listofWVectors.size();i++) {
-            	dot_product = inner_product(listofWVectors[i].begin(), listofWVectors[i].end(), testX.begin(), 0);
-
-		//greater than, does match
-            	if(dot_product*label > 0){
+    	dot_product = inner_product(listofWVectors[i].begin(), listofWVectors[i].end(), testX.begin(), 0);
+        
+		///greater than, does match
+        if(dot_product*label > 0){
 			numofmatches++;
 			returnlabel = i;		                
 		}		
@@ -177,16 +185,18 @@ vector< vector<int> > avgPerceptron(vector< vector<int> > matrix, int passes, in
 
 double avgPerceptronError(vector< vector<int> > testData, vector< vector<int> > wList, int target){
     double error = 0;
-    int dot_product = 0;
+    long long int dot_product = 0;
     int label = 0;
-    vector<int> wSum(784, 0);
+    vector<long long int> wSum(784, 0);
 
     for(int j = 0; j < wList.size(); j++){
-        wSum = vectorAdd(wSum, wList[j]);
+        wSum = vectorAdd2(wSum, wList[j]);
     }
+
     for(int i = 0; i < testData.size(); i++){
         label = labelSet(target, testData[i][784]);
-        dot_product = inner_product(wSum.begin(), wSum.end(), testData[i].begin(), 0);
+        dot_product = inner_product(wSum.begin(), wSum.end(), testData[i].begin(), (long long int) 0);
+        //cout<<"wsum:   "<<dot_product<<endl;
         if(dot_product*label <= 0){
             error++;
         }
@@ -300,20 +310,23 @@ int main() {
         cout<<"This is the test " << i << " error:  " << error << endl;  
     }  
 
-    double confusion [11][10] = {{0}};
-    double labelCount[10] = {0};
+    double confusion [11][10];
+    double labelCount[10];
+
+    memset(confusion, 0, sizeof(confusion));
+    memset(labelCount, 0, sizeof(labelCount));
 
     cout << endl << "One-vs-all Multiclass" << endl;
     vector< vector<int> > listOfWVectors = ClassifierCi(trainingBMatrix);
     int result = 0;
     for(int i = 0; i<testBMatrix.size(); i++) {
-	result = OnevsAllMulticlass(listOfWVectors, testBMatrix[i]);
-
-	labelCount[testBMatrix[i][784]] = labelCount[testBMatrix[i][784]] + 1;
-	confusion[result][testBMatrix[i][784]]++;
+    	result = OnevsAllMulticlass(listOfWVectors, testBMatrix[i]);
+    	labelCount[testBMatrix[i][784]] = labelCount[testBMatrix[i][784]] + 1;
+    	confusion[result][testBMatrix[i][784]]++;
     }
 
     cout << "Confusion Matrix" << endl;
+
     for(int i = 0; i < 11; i++){
         for(int j = 0; j < 10; j++){
             confusion[i][j] = confusion[i][j]/labelCount[j];
